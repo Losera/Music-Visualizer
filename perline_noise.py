@@ -15,6 +15,7 @@ import pyqtgraph.opengl as gl
 import sys
 from PyQt5.QtWidgets import QApplication
 from opensimplex import OpenSimplex
+import math
 
 
 class Terrain(object):
@@ -33,10 +34,16 @@ class Terrain(object):
 
         # constants and arrays
         self.nsteps = 1
-        self.ypoints = range(-20, 22, self.nsteps)
+        self.ypoints = range(-20, 22, self.nsteps) 
         self.xpoints = range(-20, 22, self.nsteps)
+        self.xrotate = 0
+        self.yrotate = 0
         self.nfaces = len(self.ypoints)
         self.offset = 0
+        self.theta = 0
+        self.theta_x = 0 # 30 degrees
+        self.theta_y = 0  # 45 degrees
+        self.theta_z = 0
 
         # perlin noise object
         seed_value = 42
@@ -48,6 +55,8 @@ class Terrain(object):
                 x, y, 1.5 * self.tmp.noise2(x=n / 5, y=m / 5)
             ] for n, x in enumerate(self.xpoints) for m, y in enumerate(self.ypoints)
         ], dtype=np.float32)
+
+        rotated_verts = self.rotate_vertices(verts,self.theta_x,self.theta_y,self.theta_z)
 
         # create the faces and colors arrays
         faces = []
@@ -65,22 +74,65 @@ class Terrain(object):
 
         # create the mesh item
         self.m1 = gl.GLMeshItem(
-            vertexes=verts,
+            vertexes=rotated_verts,
             faces=faces, faceColors=colors,
             smooth=False, drawEdges=True,
         )
         self.m1.setGLOptions('additive')
         self.w.addItem(self.m1)
 
+    # Assuming 'theta' is the angle of rotation and 'axis' is the axis of rotation
+
+    def rotation_matrix_3d(self, theta_x, theta_y, theta_z):
+        """Create a combined 3D rotation matrix for rotation around X, Y, and Z axes."""
+        
+        # Rotation matrix around the X-axis
+        R_x = np.array([
+            [1, 0, 0],
+            [0, np.cos(theta_x), -np.sin(theta_x)],
+            [0, np.sin(theta_x), np.cos(theta_x)]
+        ])
+        
+        # Rotation matrix around the Y-axis
+        R_y = np.array([
+            [np.cos(theta_y), 0, np.sin(theta_y)],
+            [0, 1, 0],
+            [-np.sin(theta_y), 0, np.cos(theta_y)]
+        ])
+        
+        # Rotation matrix around the Z-axis
+        R_z = np.array([
+            [np.cos(theta_z), -np.sin(theta_z), 0],
+            [np.sin(theta_z), np.cos(theta_z), 0],
+            [0, 0, 1]
+        ])
+        
+        # Combine the rotations: R_total = R_z * R_y * R_x
+        R_total = np.dot(np.dot(R_z, R_y), R_x)
+        
+        return R_total
+
+    def rotate_vertices(self, vertices, theta_x, theta_y, theta_z):
+        """Apply the 3D rotation to a set of vertices."""
+        rotation_matrix = self.rotation_matrix_3d(theta_x, theta_y, theta_z)
+        rotated_vertices = np.dot(vertices, rotation_matrix.T)
+        return rotated_vertices
+
     def update(self):
         """
         Update the mesh and shift the noise each time
         """
+        self.theta_x -= np.pi / 60  # 30 degrees
+        self.theta_y += np.pi / 40  # 45 degrees
+        self.theta_z -= np.pi / 30 
+        
         verts = np.array([
             [
                 x, y, 2.5 * self.tmp.noise2(x=n / 5 + self.offset, y=m / 5 + self.offset)
             ] for n, x in enumerate(self.xpoints) for m, y in enumerate(self.ypoints)
         ], dtype=np.float32)
+
+        rotated_verts = self.rotate_vertices(verts,self.theta_x,self.theta_y,self.theta_z)
 
         faces = []
         colors = []
@@ -96,7 +148,7 @@ class Terrain(object):
         colors = np.array(colors, dtype=np.float32)
 
         self.m1.setMeshData(
-            vertexes=verts, faces=faces, faceColors=colors
+            vertexes=rotated_verts, faces=faces, faceColors=colors
         )
         
         # Debugging prints
