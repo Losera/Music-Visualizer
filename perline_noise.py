@@ -141,8 +141,8 @@ class Terrain(object):
             for n in range(self.nfaces - 1):
                 faces.append([n + yoff, yoff + n + self.nfaces, yoff + n + self.nfaces + 1])
                 faces.append([n + yoff, yoff + n + 1, yoff + n + self.nfaces + 1])
-                colors.append([n / self.nfaces, 0.9 - n / self.nfaces, m / self.nfaces, 5.7])
-                colors.append([n / self.nfaces, 0.9 - n / self.nfaces, m / self.nfaces, 5.8])
+                colors.append([n , 0.9 - n / self.nfaces, m / self.nfaces, 5.7])
+                colors.append([n , 0.9 - n / self.nfaces, m / self.nfaces, 5.8])
 
         faces = np.array(faces, dtype=np.uint32)
         colors = np.array(colors, dtype=np.float32)
@@ -153,7 +153,7 @@ class Terrain(object):
         
         # Debugging prints
 
-        self.offset -= 0.18
+        self.offset -= 0.38
     def start(self):
         """
         get the graphics window open and setup
